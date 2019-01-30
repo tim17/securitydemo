@@ -16,6 +16,9 @@ public interface MenuService {
 
     public Menu find(Integer id) throws Exception;
 
+    public List<Menu> findAll() throws Exception;
+
+
     public PageInfo selectList(Map<String, Object> map, Page page) throws Exception;
 
     public PageInfo selectMenuListByRoleId(Integer roleId, Page page) throws Exception;

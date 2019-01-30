@@ -19,6 +19,8 @@ public interface UserService {
 
     public User find(Integer id) throws Exception;
 
+    public User findByUsername(String username) throws Exception;
+
     public PageInfo selectList(Map<String, Object> map, Page page) throws Exception;
 
     public PageInfo selectListByRoleId(Integer roleId, Page page) throws Exception;
@@ -42,6 +44,15 @@ public interface UserService {
      * @return
      */
     public int register(String username, String password, String mobile) throws Exception;
+
+    /**
+     * 修改密码
+     *
+     * @param username
+     * @param password
+     * @throws Exception
+     */
+    public void changePassword(String username, String password) throws Exception;
 
     /**
      * 自定义登录

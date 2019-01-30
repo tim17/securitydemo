@@ -43,6 +43,7 @@ public class TestController {
 
     @PostMapping("/addUser")
     @ApiOperation(value = "新增用户", notes = "新增用户")
+    public @ResponseBody
     ReturnData addUser(UserDto dto) {
         try {
             User bean = new User();
@@ -59,6 +60,7 @@ public class TestController {
 
     @PostMapping("/addMenu")
     @ApiOperation(value = "新增菜单", notes = "新增菜单")
+    public @ResponseBody
     ReturnData addMenu(MenuDto dto) {
         try {
             Menu bean = new Menu();
@@ -75,6 +77,7 @@ public class TestController {
 
     @PostMapping("/addRole")
     @ApiOperation(value = "新增角色", notes = "新增角色")
+    public @ResponseBody
     ReturnData addRole(RoleDto dto) {
         try {
             Role bean = new Role();
@@ -94,6 +97,7 @@ public class TestController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "userId", value = "用户ID", required = true, dataType = "String", example = "0"),
             @ApiImplicitParam(name = "roleId", value = "角色ID", required = true, dataType = "String", example = "0")})
+    public @ResponseBody
     ReturnData batchInsertUserRole(
             @RequestParam(value = "userId", required = false) Integer userId,
             @RequestParam(value = "roleId", required = false) Integer roleId
@@ -119,6 +123,7 @@ public class TestController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "menuId", value = "菜单ID", required = true, dataType = "String", example = "0"),
             @ApiImplicitParam(name = "roleId", value = "角色ID", required = true, dataType = "String", example = "0")})
+    public @ResponseBody
     ReturnData batchInsertMenuRole(
             @RequestParam(value = "menuId", required = false) Integer menuId,
             @RequestParam(value = "roleId", required = false) Integer roleId
@@ -272,6 +277,7 @@ public class TestController {
             @ApiImplicitParam(name = "username", value = "用户名", paramType = "query", required = false, dataType = "String"),
             @ApiImplicitParam(name = "password", value = "密码", paramType = "query", required = false, dataType = "String")
     })
+    public @ResponseBody
     ReturnData register(@RequestParam(value = "username", required = false) String username,
                         @RequestParam(value = "password", required = false) String password) {
         try {
@@ -292,6 +298,7 @@ public class TestController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "userId", value = "用户名", paramType = "query", required = false, dataType = "Integer")
     })
+    public @ResponseBody
     ReturnData findUser(@RequestParam(value = "userId", required = false) Integer userId) {
         try {
             User user = userService.find(userId);

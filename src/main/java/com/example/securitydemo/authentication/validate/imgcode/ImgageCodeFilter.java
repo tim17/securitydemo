@@ -3,6 +3,7 @@ package com.example.securitydemo.authentication.validate.imgcode;
 import com.example.securitydemo.authentication.controller.ValidateController;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.social.connect.web.HttpSessionSessionStrategy;
@@ -30,6 +31,9 @@ public class ImgageCodeFilter extends OncePerRequestFilter {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    @Value("${CACHE_KEY_IMAGE_CODE}")
+    public String CACHE_KEY_IMAGE_CODE;
+
     @Override
     protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
         if (StringUtils.equalsIgnoreCase("/login", httpServletRequest.getRequestURI())
@@ -49,8 +53,7 @@ public class ImgageCodeFilter extends OncePerRequestFilter {
     private void validateCode(ServletWebRequest servletWebRequest) throws ServletRequestBindingException {
         String keyInRequest = ServletRequestUtils.getStringParameter(servletWebRequest.getRequest(), "imageCodeKey");
         String codeInRequest = ServletRequestUtils.getStringParameter(servletWebRequest.getRequest(), "imageCode");
-        ImageCode codeInCache = (ImageCode) redisTemplate.opsForValue().get(ValidateController.KEY_IMAGE_CODE + "_" + keyInRequest);
-
+        ImageCode codeInCache = (ImageCode) redisTemplate.opsForValue().get(CACHE_KEY_IMAGE_CODE + "_" + keyInRequest);
         if (StringUtils.isBlank(codeInRequest)) {
             throw new ValidateCodeException("验证码不能为空！");
         }
@@ -58,13 +61,13 @@ public class ImgageCodeFilter extends OncePerRequestFilter {
             throw new ValidateCodeException("验证码不存在！");
         }
         if (LocalDateTime.now().isAfter(codeInCache.getExpireTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime())) {
-            redisTemplate.delete(ValidateController.KEY_SMS_CODE + "_" + keyInRequest);
+            redisTemplate.delete(CACHE_KEY_IMAGE_CODE + "_" + keyInRequest);
             throw new ValidateCodeException("验证码已过期！");
         }
         if (!StringUtils.equalsIgnoreCase(codeInCache.getCode(), codeInRequest)) {
             throw new ValidateCodeException("验证码不正确！");
         }
-        redisTemplate.delete(ValidateController.KEY_SMS_CODE + "_" + keyInRequest);
+        redisTemplate.delete(CACHE_KEY_IMAGE_CODE + "_" + keyInRequest);
 
     }
 

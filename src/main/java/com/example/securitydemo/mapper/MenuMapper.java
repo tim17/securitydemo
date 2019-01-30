@@ -55,6 +55,12 @@ public interface MenuMapper {
     List<Menu> selectAll(Map<String, Object> map);
 
     @Select({
+            "select * from menu ",
+    })
+    @ResultMap(value = "menuMap")
+    List<Menu> selectAllmenu();
+
+    @Select({
             "select m.* from menu m,menu_role r where m.id=r.menu_id and r.role_id = #{roleId} and m.enabled=true ",
     })
     @ResultMap(value = "menuMap")

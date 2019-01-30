@@ -3,7 +3,7 @@ package com.example.securitydemo.authentication.validate.jwt;
 import com.example.securitydemo.authentication.handler.TokenAuthenticationHandler;
 import com.example.securitydemo.common.dto.ReturnData;
 import com.example.securitydemo.model.User;
-import com.example.securitydemo.util.FastJsonUtils;
+//import com.example.securitydemo.util.FastJsonUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -34,6 +34,7 @@ import java.util.Map;
 
 public class JWTLoginFilter extends UsernamePasswordAuthenticationFilter {
 
+
     public static final String USERNAME_KEY = "username";
     private String usernameParameter = USERNAME_KEY;
     public static final String PWD_KEY = "password";
@@ -41,7 +42,7 @@ public class JWTLoginFilter extends UsernamePasswordAuthenticationFilter {
 
     public static final Integer EXPIRATION_DAYS = 365;
     public static final String AUTHENTICATION_TYPE = "Bearer ";
-    public static final String SECRETKEY = "THTJwtSecret";
+    public static final String SECRETKEY = "JwtSecret";
 
     private boolean postOnly = true;
 
@@ -86,7 +87,7 @@ public class JWTLoginFilter extends UsernamePasswordAuthenticationFilter {
 //        String token = Jwts.builder()
 //                .setSubject(((User) authentication.getPrincipal()).getUsername())
 //                .setExpiration(new Date(System.currentTimeMillis() + 60 * 60 * 24 * 1000 * EXPIRATION_DAYS))
-//                .signWith(SignatureAlgorithm.HS512, "THTJwtSecret")
+//                .signWith(SignatureAlgorithm.HS512, "JwtSecret")
 //                .compact();
 //        response.addHeader("Authorization", AUTHENTICATION_TYPE + token);
 ////        response.addHeader("Authorization", token);

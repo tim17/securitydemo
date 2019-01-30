@@ -8,6 +8,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,9 @@ public class MenuServiceImpl implements MenuService {
 
     @Autowired
     private MenuMapper menuMapper;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     public int add(Menu bean) throws Exception {
@@ -35,6 +39,19 @@ public class MenuServiceImpl implements MenuService {
     public Menu find(Integer id) throws Exception {
         Menu bean = menuMapper.selectByPrimaryKey(id);
         return bean;
+    }
+
+    @Override
+    public List<Menu> findAll() throws Exception {
+        if (redisTemplate.opsForValue().get("TEST_ALL_MENU") != null) {
+            List<Menu> allMenu = (List<Menu>) redisTemplate.opsForValue().get("TEST_ALL_MENU");
+            return allMenu;
+        } else {
+            List<Menu> allMenu = menuMapper.selectAllmenu();
+            redisTemplate.opsForValue().set("TEST_ALL_MENU", allMenu);
+            return allMenu;
+        }
+//        return menuMapper.selectAllmenu();
     }
 
     @Override

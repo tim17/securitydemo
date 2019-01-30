@@ -27,7 +27,7 @@ public class Swagger2Config {
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("THT API接口")
+                .title("API接口")
                 .description("提供rest接口")
                 .version("1.0")
                 .build();

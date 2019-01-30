@@ -3,7 +3,8 @@ package com.example.securitydemo.authentication.handler;
 import com.alibaba.fastjson.JSONObject;
 import com.example.securitydemo.common.dto.ReturnData;
 import com.example.securitydemo.model.User;
-import com.example.securitydemo.util.FastJsonUtils;
+import com.example.securitydemo.service.UserService;
+//import com.example.securitydemo.util.FastJsonUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -35,7 +37,10 @@ public class MyAuthenctiationSuccessHandler implements AuthenticationSuccessHand
 
     public static final Integer EXPIRATION_DAYS = 365;
     public static final String AUTHENTICATION_TYPE = "Bearer ";
-    public static final String SECRETKEY = "THTJwtSecret";
+    public static final String SECRETKEY = "JwtSecret";
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -50,20 +55,28 @@ public class MyAuthenctiationSuccessHandler implements AuthenticationSuccessHand
   */
 
         System.out.println("===== MyAuthenctiationSuccessHandler onAuthenticationSuccess =====");
+
+        UserDetails user = userService.loadUserByUsername(((User) authentication.getPrincipal()).getUsername());
+        HashMap<String, Object> rolesMap = new HashMap<>();
+        rolesMap.put("role", user.getAuthorities());
+
+
         String token = Jwts.builder()
+                .setClaims(rolesMap)
                 .setSubject(((User) authentication.getPrincipal()).getUsername())
                 .setExpiration(new Date(System.currentTimeMillis() + 60 * 60 * 24 * 1000 * EXPIRATION_DAYS))
-                .signWith(SignatureAlgorithm.HS512, "THTJwtSecret")
+                .signWith(SignatureAlgorithm.HS512, SECRETKEY)
                 .compact();
+
         response.addHeader("Authorization", AUTHENTICATION_TYPE + token);
 //        response.addHeader("Authorization", token);
         response.setContentType("application/json;charset=UTF-8");
-        ReturnData returnData = new ReturnData("200", "");
+        ReturnData appReturnData = new ReturnData("200", "");
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("token", AUTHENTICATION_TYPE + token);
-        returnData.setData(map);
+        appReturnData.setData(map);
 //        String result = FastJsonUtils.toJSONString(returnData);
-        String result = JSONObject.toJSONString(returnData);
+        String result = JSONObject.toJSONString(appReturnData);
         System.out.println(result);
         response.getWriter().write(result);
     }

@@ -204,7 +204,7 @@
     </dependencies>
 
     <build>
-        <finalName>tht</finalName>
+        <finalName>securitydemo</finalName>
         <plugins>
 
             <plugin>

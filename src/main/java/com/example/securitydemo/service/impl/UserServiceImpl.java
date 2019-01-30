@@ -49,6 +49,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User findByUsername(String username) throws Exception {
+        User bean = userMapper.findByUserName(username);
+        return bean;
+    }
+
+
+    @Override
     public PageInfo selectList(Map<String, Object> map, Page page) throws Exception {
 
         PageHelper.startPage(page.getPageNum(), page.getPageSize());
@@ -98,6 +105,18 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        }
+    }
+
+
+    @Override
+    public void changePassword(String username, String password) throws Exception {
+        try {
+            User bean = userMapper.findByUserName(username);
+            bean.setPassword(passwordEncoder.encode(password));
+            userMapper.update(bean);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

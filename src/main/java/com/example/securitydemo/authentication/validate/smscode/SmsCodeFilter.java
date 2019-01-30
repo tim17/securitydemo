@@ -3,6 +3,7 @@ package com.example.securitydemo.authentication.validate.smscode;
 import com.example.securitydemo.authentication.controller.ValidateController;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -28,11 +29,15 @@ public class SmsCodeFilter extends OncePerRequestFilter {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    @Value("${CACHE_KEY_SMS_CODE}")
+    public String CACHE_KEY_SMS_CODE;
+
     @Override
     protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
         if (StringUtils.equalsIgnoreCase("/login/mobile", httpServletRequest.getRequestURI())
                 || StringUtils.equalsIgnoreCase("/user/bind_mobile", httpServletRequest.getRequestURI())
                 || StringUtils.equalsIgnoreCase("/user/register", httpServletRequest.getRequestURI())
+                || StringUtils.equalsIgnoreCase("/user/change", httpServletRequest.getRequestURI())
                 && StringUtils.equalsIgnoreCase(httpServletRequest.getMethod(), "post")) {
 
             System.out.println(" ===== doFilterInternal SmsCodeFilter ===== ");
@@ -50,7 +55,7 @@ public class SmsCodeFilter extends OncePerRequestFilter {
     private void validateCode(ServletWebRequest servletWebRequest) throws ServletRequestBindingException {
         String smsCodeInRequest = ServletRequestUtils.getStringParameter(servletWebRequest.getRequest(), "smsCode");
         String mobileInRequest = ServletRequestUtils.getStringParameter(servletWebRequest.getRequest(), "mobile");
-        SmsCode codeInCache = (SmsCode) redisTemplate.opsForValue().get(ValidateController.KEY_SMS_CODE + "_" + mobileInRequest);
+        SmsCode codeInCache = (SmsCode) redisTemplate.opsForValue().get(CACHE_KEY_SMS_CODE + "_" + mobileInRequest);
         if (StringUtils.isBlank(smsCodeInRequest)) {
             throw new ValidateCodeException("验证码不能为空！");
         }
@@ -58,12 +63,12 @@ public class SmsCodeFilter extends OncePerRequestFilter {
             throw new ValidateCodeException("验证码不存在！");
         }
         if (LocalDateTime.now().isAfter(codeInCache.getExpireTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime())) {
-            redisTemplate.delete(ValidateController.KEY_SMS_CODE + "_" + mobileInRequest);
+            redisTemplate.delete(CACHE_KEY_SMS_CODE + "_" + mobileInRequest);
             throw new ValidateCodeException("验证码已过期！");
         }
         if (!StringUtils.equalsIgnoreCase(codeInCache.getCode(), smsCodeInRequest)) {
             throw new ValidateCodeException("验证码不正确！");
         }
-        redisTemplate.delete(ValidateController.KEY_SMS_CODE + "_" + mobileInRequest);
+        redisTemplate.delete(CACHE_KEY_SMS_CODE + "_" + mobileInRequest);
     }
 }

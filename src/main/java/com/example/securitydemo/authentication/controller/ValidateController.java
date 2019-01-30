@@ -5,11 +5,11 @@ import com.example.securitydemo.authentication.validate.imgcode.ImageCode;
 import com.example.securitydemo.common.dto.ReturnData;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.social.connect.web.HttpSessionSessionStrategy;
 import org.springframework.social.connect.web.SessionStrategy;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.ServletWebRequest;
 import sun.misc.BASE64Encoder;
 
@@ -26,13 +26,32 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @RestController
+@RequestMapping(value = "security")
 public class ValidateController {
 
-    public final static String KEY_IMAGE_CODE = "IMAGE_CODE";
+    @Value("${CACHE_KEY_IMAGE_CODE}")
+    public String CACHE_KEY_IMAGE_CODE;
+    @Value("${CACHE_KEY_SMS_CODE}")
+    public String CACHE_KEY_SMS_CODE;
+    @Value("${CACHE_IMAGE_CODE_TIMEOUT}")
+    public Integer CACHE_IMAGE_CODE_TIMEOUT;
+    @Value("${CACHE_SMS_CODE_TIMEOUT}")
+    public Integer CACHE_SMS_CODE_TIMEOUT;
+    @Value("${SEND_SMS_CODE_LIMIT_TIMES}")
+    public Integer SEND_SMS_CODE_LIMIT_TIMES;
+    @Value("${SEND_SMS_CODE_LIMIT_TIMES_TIMEOUT}")
+    public Integer SEND_SMS_CODE_LIMIT_TIMES_TIMEOUT;
+    @Value("${SEND_KEY_SMS_CODE_LIMIT_TIMES}")
+    public String SEND_KEY_SMS_CODE_LIMIT_TIMES;
 
-    public final static String KEY_SMS_CODE = "SMS_CODE";
+    @Value("${IMAGE_CODE_TIMEOUT}")
+    public Integer IMAGE_CODE_TIMEOUT;
+    @Value("${SMS_CODE_TIMEOUT}")
+    public Integer SMS_CODE_TIMEOUT;
+
 
     private SessionStrategy sessionStrategy = new HttpSessionSessionStrategy();
 
@@ -40,7 +59,8 @@ public class ValidateController {
     private RedisTemplate redisTemplate;
 
     @GetMapping("/code/imageCode")
-    public ReturnData imageCode(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public @ResponseBody
+    ReturnData imageCode(HttpServletRequest request, HttpServletResponse response) throws IOException {
 
         System.out.println("==== createCode  ");
         ImageCode imageCode = createImageCode();
@@ -55,7 +75,7 @@ public class ValidateController {
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("imageCode", encoder.encode(outputStream.toByteArray()).replaceAll("\r|\n", ""));
         map.put("imageCodeKey", imageCodeKey);
-        redisTemplate.opsForValue().set(KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache);
+        redisTemplate.opsForValue().set(CACHE_KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache, CACHE_IMAGE_CODE_TIMEOUT, TimeUnit.SECONDS);
         return new ReturnData("200", "", map);
     }
 
@@ -65,24 +85,53 @@ public class ValidateController {
         ImageCode imageCode = createImageCode();
         String imageCodeKey = UUID.randomUUID().toString();
         ImageCode imageCodeInCache = new ImageCode(null, imageCode.getCode(), imageCode.getExpireTime());
-        redisTemplate.opsForValue().set(KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache);
-        sessionStrategy.setAttribute(new ServletWebRequest(request), KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache);
+        redisTemplate.opsForValue().set(CACHE_KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache, CACHE_IMAGE_CODE_TIMEOUT, TimeUnit.SECONDS);
+        sessionStrategy.setAttribute(new ServletWebRequest(request), CACHE_KEY_IMAGE_CODE + "_" + imageCodeKey, imageCodeInCache);
         ImageIO.write(imageCode.getImage(), "jpeg", response.getOutputStream());
     }
 
-    @GetMapping("/code/sms")
-    public void createSmsCode(HttpServletRequest request, HttpServletResponse response, String mobile) {
+    @PostMapping("/code/sms")
+    public @ResponseBody
+    ReturnData createSmsCode(HttpServletRequest request, HttpServletResponse response, String mobile) throws IOException {
         System.out.println(" =====  /code/sms ");
-//        SmsCode codeInSession = (SmsCode) sessionStrategy.getAttribute(new ServletWebRequest(request), KEY_SMS_CODE + mobile);
-        SmsCode codeInCache = (SmsCode) redisTemplate.opsForValue().get(KEY_SMS_CODE + "_" + mobile);
+        //判断发送次数
+        Integer sendTimes = null;
+        if (redisTemplate.opsForValue().get(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile) != null) {
+            System.out.println("======= SEND_KEY_SMS_CODE_LIMIT_TIMES : " + SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile);
+            sendTimes = (Integer) redisTemplate.opsForValue().get(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile);
+        } else {
+            sendTimes = 0;
+        }
+        System.out.println("===== sendTimes " + sendTimes);
+        SmsCode codeInCache = (SmsCode) redisTemplate.opsForValue().get(CACHE_KEY_SMS_CODE + "_" + mobile);
         if (codeInCache != null && !LocalDateTime.now().isAfter(codeInCache.getExpireTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime())) {
-            System.out.println("您的登录验证码为：" + codeInCache.getCode() + "，有效时间为60秒");
+            System.out.println("您的登录验证码已发送：" + codeInCache.getCode() + "，有效时间为" + SMS_CODE_TIMEOUT + "秒");
+            return new ReturnData("200", "发送成功，有效时间为" + SMS_CODE_TIMEOUT + "秒");
         } else {
             SmsCode smsCode = createSMSCode();
-            redisTemplate.opsForValue().set(KEY_SMS_CODE + "_" + mobile, smsCode);
-//            sessionStrategy.setAttribute(new ServletWebRequest(request), KEY_SMS_CODE+"-" + mobile, smsCode);
-            // 输出验证码到控制台代替短信发送服务
-            System.out.println("您的登录验证码为：" + smsCode.getCode() + "，有效时间为60秒");
+
+            redisTemplate.opsForValue().set(CACHE_KEY_SMS_CODE + "_" + mobile, smsCode, CACHE_SMS_CODE_TIMEOUT, TimeUnit.SECONDS);
+            //判断发送次数
+            if (sendTimes <= SEND_SMS_CODE_LIMIT_TIMES) {
+                /***
+                 * 此处添加发送短信
+                 */
+                System.out.println("您的登录验证码为：" + smsCode.getCode() + "，有效时间为" + SMS_CODE_TIMEOUT + "秒");
+                System.out.println("===== sendTimes " + sendTimes);
+                //记录发送次数
+                System.out.println("======= SEND_KEY_SMS_CODE_LIMIT_TIMES : " + SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile);
+                if (sendTimes == 0) {
+                    redisTemplate.opsForValue().set(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile, sendTimes + 1, SEND_SMS_CODE_LIMIT_TIMES_TIMEOUT, TimeUnit.SECONDS);
+                } else {
+                    System.out.println("==== 发送次数累加 ");
+                    redisTemplate.getConnectionFactory().getConnection().incr(redisTemplate.getKeySerializer().serialize(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile));
+//                    stringRedisTemplate.getConnectionFactory().getConnection().incr(stringRedisTemplate.getKeySerializer().serialize(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile));
+//                    redisTemplate.opsForValue().set(SEND_KEY_SMS_CODE_LIMIT_TIMES + "_" + mobile, sendTimes + 1);
+                }
+                return new ReturnData("200", "发送成功，有效时间为" + SMS_CODE_TIMEOUT + "秒", smsCode);
+            } else {
+                return new ReturnData("500", "发送次数超限");
+            }
         }
     }
 

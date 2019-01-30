@@ -22,6 +22,9 @@ public class UserDetailService implements UserDetailsService {
         System.out.println("==== loadUserByUsername ====");
         UserDetails user = userService.loadUserByUsername(username);
 //        System.out.println("====" + user.getUsername() + " : " + user.getPassword());
+        if (user == null) {
+            throw new UsernameNotFoundException("用户不存在");
+        }
         return user;
     }
 }
